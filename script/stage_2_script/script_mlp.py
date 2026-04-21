@@ -43,4 +43,4 @@ if 1:
     # ------------------------------------------------------
     
 
-    # Getting an error when running, so something is wrong
+    # Got it to work, but it takes a long time (~3 mins) for it to train.
