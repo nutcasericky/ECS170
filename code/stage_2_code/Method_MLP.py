@@ -33,7 +33,7 @@ class Method_MLP(method, nn.Module):
             nn.ReLU(),
             nn.Linear(128,10),
         )
-
+        # Original Code below
         """"# check here for nn.Linear doc: https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
         self.fc_layer_1 = nn.Linear(4, 4)
         # check here for nn.ReLU doc: https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html
@@ -94,7 +94,7 @@ class Method_MLP(method, nn.Module):
                 loss.backward()
                 optimizer.step()
 
-            # Original Code below, didn't delete just in case
+
             """ # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
             y_pred = self.forward(torch.FloatTensor(np.array(X)))
             # convert y to torch.tensor as well
@@ -115,7 +115,7 @@ class Method_MLP(method, nn.Module):
                 with torch.no_grad():
                     y_pred = self.forward(X_tensor)
                     accuracy_evaluator.data = {'true_y': y_tensor, 'pred_y': y_pred.max(1)[1]}
-                    print('Epoch:', epoch, 'Accuracy:', accuracy_evaluator.evaluate(), 'Loss:', train_loss.item())
+                    print('Epoch:', epoch, 'Accuracy:', accuracy_evaluator.evaluate(), 'Loss:', loss.item())
     
     def test(self, X):
         # do the testing, and result the result
