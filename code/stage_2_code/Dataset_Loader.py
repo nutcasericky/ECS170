@@ -17,27 +17,41 @@ class Dataset_Loader(dataset):
         super().__init__(dName, dDescription)
 
     def load(self):
+        import os
+        path = self.dataset_source_folder_path + self.dataset_source_file_name
+        print("Opening file:", path)
+        print("File exists?", os.path.exists(path))
+        print("Absolute path:", os.path.abspath(path))
         print('loading data...')
+
         X = []
         y = []
 
-        with open(self.dataset_source_folder_path + self.dataset_source_file_name, 'r') as f:
-            for line in f:
-                elements = line.strip().split()
+        with open(path, 'r') as f:
+            for line_idx, line in enumerate(f):
+                elements = line.strip().replace(',', ' ').split()
 
-                # try to safely parse
-                try:
-                    elements = [int(i) for i in elements]
-                except:
+                cleaned = []
+                for i in elements:
+                    i = i.strip()
+                    if i == '':
+                        continue
+                    try:
+                        cleaned.append(int(i))
+                    except:
+                        continue
+
+                elements = cleaned
+
+                if len(elements) < 10:
                     continue
 
-                # skip only if clearly invalid
-                if len(elements) < 2:
-                    continue
-
-                # label first, rest features
                 y.append(elements[0])
                 X.append(elements[1:])
 
-        print("Loaded X shape:", np.array(X).shape)
+        print("Number of samples:", len(X))
+        if len(X) > 0:
+            print("Loaded X shape:", np.array(X).shape)
+            print("First sample length:", len(X[0]))
+
         return {'X': X, 'y': y}
