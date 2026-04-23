@@ -30,7 +30,7 @@ class Evaluate_Accuracy(evaluate):
 
         print(results)
 
-        return results["accuracy"]  # keeping this so KFold still works
+        return results["Accuracy"]  # keeping this so KFold still works
 
 
 # Original Code
