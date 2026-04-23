@@ -71,30 +71,30 @@ class Method_MLP(method, nn.Module):
         # for training accuracy investigation purpose
         accuracy_evaluator = Evaluate_Accuracy('training evaluator', '')
 
-        # it will be an iterative gradient updating process
-        # we don't do mini-batch, we use the whole input as one batch
-        # you can try to split X and y into smaller-sized batches by yourself
-
         X_tensor = torch.FloatTensor(np.array(X)) / 255.0
         y_tensor = torch.LongTensor(np.array(y))
 
         batch_size = 128
 
         for epoch in range(self.max_epoch): # you can do an early stop if self.max_epoch is too much...
+            epoch_loss = 0
             permutation = torch.randperm(X_tensor.size()[0])
 
-            for i in range (0, X_tensor.size()[0], batch_size):
+            for i in range (0, X_tensor.size(0), batch_size):
                 indices = permutation[i:i+batch_size]
                 batch_x = X_tensor[indices]
                 batch_y = y_tensor[indices]
 
-                optimizer.zero_grad()
                 outputs = self.forward(batch_x)
                 loss = loss_function(outputs, batch_y)
+
+                optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
+                epoch_loss += loss.item()
 
+            # Original Code that was given
             """ # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
             y_pred = self.forward(torch.FloatTensor(np.array(X)))
             # convert y to torch.tensor as well
@@ -111,11 +111,13 @@ class Method_MLP(method, nn.Module):
             # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
             optimizer.step() """
 
-            if epoch%100 == 0:
+            if epoch%10 == 0:
                 with torch.no_grad():
                     y_pred = self.forward(X_tensor)
-                    accuracy_evaluator.data = {'true_y': y_tensor, 'pred_y': y_pred.max(1)[1]}
-                    print('Epoch:', epoch, 'Accuracy:', accuracy_evaluator.evaluate(), 'Loss:', loss.item())
+                    y_pred_labels = y_pred.argmax(dim=1)
+
+                accuracy_evaluator.data = {'true_y': y_tensor, 'pred_y': y_pred.max(1)[1]}
+                print('Epoch:', epoch, 'Accuracy:', accuracy_evaluator.evaluate(), 'Loss:', epoch_loss)
     
     def test(self, X):
         # do the testing, and result the result
