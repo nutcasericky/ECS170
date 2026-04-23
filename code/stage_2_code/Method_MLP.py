@@ -111,7 +111,7 @@ class Method_MLP(method, nn.Module):
             # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
             optimizer.step() """
 
-            if epoch%10 == 0:
+            if epoch%10 == 0: # Print out every 10 epochs to see the loss. Can change to be smaller/bigger for more fine tuned graph.
                 with torch.no_grad():
                     y_pred = self.forward(X_tensor)
                     y_pred_labels = y_pred.argmax(dim=1)
