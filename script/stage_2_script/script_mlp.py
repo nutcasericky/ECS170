@@ -7,6 +7,9 @@ from local_code.stage_2_code.Evaluate_Accuracy import Evaluate_Accuracy
 import numpy as np
 import torch
 
+# Any """ or ''' is where the original code was,
+# I just blanked it just in case I needed to go back or use it for reference
+
 #---- Multi-Layer Perceptron script ----
 if 1:
     #---- parameter section -------------------------------
@@ -43,4 +46,4 @@ if 1:
     # ------------------------------------------------------
     
 
-    # Got it to work, but it takes a long time (~3 mins) for it to train.
+    
