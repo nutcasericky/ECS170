@@ -21,10 +21,10 @@ class Evaluate_Accuracy(evaluate):
         pred_y = self.data['pred_y']
 
         results = {
-            "Accuracy": accuracy_score(true_y, pred_y),
-            "Precision_macro": precision_score(true_y, pred_y, average='macro'),
-            "Recall_macro": recall_score(true_y, pred_y, average='macro'),
-            "F1_macro": f1_score(true_y, pred_y, average='macro')
+            "Accuracy": accuracy_score(true_y, pred_y), # Calculate Accuracy
+            "Precision_macro": precision_score(true_y, pred_y, average='macro'), # Calculate Precision (macro)
+            "Recall_macro": recall_score(true_y, pred_y, average='macro'), # Calculate Recall (macro)
+            "F1_macro": f1_score(true_y, pred_y, average='macro') # Calculate F1 (macro)
         }
         # Had to search up how to find Precision, Recall, and F1, also what "macro" was.
 
