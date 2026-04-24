@@ -15,7 +15,7 @@ import numpy as np
 class Method_MLP(method, nn.Module):
     data = None
     # it defines the max rounds to train the model
-    max_epoch = 50
+    max_epoch = 50 # Could do more I guess.
     # it defines the learning rate for gradient descent based optimizer for model learning
     learning_rate = 1e-3
 
@@ -63,6 +63,7 @@ class Method_MLP(method, nn.Module):
     # so we don't need to define the error backpropagation function here
 
     def train(self, X, y):
+        self.loss_history = [] # Initialize
         print("Shape of X:", np.array(X).shape) # print debug statement REMOVE
         # check here for the torch.optim doc: https://pytorch.org/docs/stable/optim.html
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
@@ -74,8 +75,9 @@ class Method_MLP(method, nn.Module):
         X_tensor = torch.FloatTensor(np.array(X)) / 255.0
         y_tensor = torch.LongTensor(np.array(y))
 
-        batch_size = 128
+        batch_size = 128 # Mini-Batch 
 
+        loss_history = []
         for epoch in range(self.max_epoch): # you can do an early stop if self.max_epoch is too much...
             epoch_loss = 0
             permutation = torch.randperm(X_tensor.size()[0])
@@ -94,6 +96,8 @@ class Method_MLP(method, nn.Module):
 
                 epoch_loss += loss.item()
 
+            self.loss_history.append(epoch_loss)
+
             # Original Code that was given
             """ # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
             y_pred = self.forward(torch.FloatTensor(np.array(X)))
@@ -111,13 +115,14 @@ class Method_MLP(method, nn.Module):
             # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
             optimizer.step() """
 
-            if epoch%10 == 0: # Print out every 10 epochs to see the loss. Can change to be smaller/bigger for more fine tuned graph.
+            if epoch%5 == 0:
                 with torch.no_grad():
                     y_pred = self.forward(X_tensor)
                     y_pred_labels = y_pred.argmax(dim=1)
 
                 accuracy_evaluator.data = {'true_y': y_tensor, 'pred_y': y_pred.max(1)[1]}
                 print('Epoch:', epoch, 'Accuracy:', accuracy_evaluator.evaluate(), 'Loss:', epoch_loss)
+
     
     def test(self, X):
         # do the testing, and result the result
@@ -132,5 +137,5 @@ class Method_MLP(method, nn.Module):
         self.train(self.data['train']['X'], self.data['train']['y'])
         print('--start testing...')
         pred_y = self.test(self.data['test']['X'])
-        return {'pred_y': pred_y, 'true_y': self.data['test']['y']}
+        return {'pred_y': pred_y, 'true_y': self.data['test']['y'], 'loss_history': self.loss_history}
             
