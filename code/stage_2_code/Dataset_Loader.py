@@ -22,6 +22,7 @@ class Dataset_Loader(dataset):
         print("Opening file:", path)
         print("File exists?", os.path.exists(path))
         print("Absolute path:", os.path.abspath(path))
+        # Above is debugging b/c I couldn't figure out where to open file
         print('loading data...')
 
         X = []
@@ -46,6 +47,7 @@ class Dataset_Loader(dataset):
                 if len(elements) < 10:
                     continue
 
+                # Used ChatGPT to help explain the continue lines.
                 y.append(elements[0])
                 X.append(elements[1:])
 
