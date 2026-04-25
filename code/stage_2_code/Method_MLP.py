@@ -28,7 +28,7 @@ class Method_MLP(method, nn.Module):
 
         self.model = nn.Sequential(
             nn.Linear(784,256),
-            nn.ReLU(),
+            nn.ReLU(), # Rectified Linear Unit, it prevents the ML from "memorizing" the data and forces it to actually learn it. 
             nn.Linear(256,128),
             nn.ReLU(),
             nn.Linear(128,10),
