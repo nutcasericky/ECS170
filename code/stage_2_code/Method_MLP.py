@@ -115,7 +115,7 @@ class Method_MLP(method, nn.Module):
             # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
             optimizer.step() """
 
-            if epoch%5 == 0:
+            if epoch%5 == 0: # Every 5 epoch, print out the data, could change to every one, every ten, etc.
                 with torch.no_grad():
                     y_pred = self.forward(X_tensor)
                     y_pred_labels = y_pred.argmax(dim=1)
