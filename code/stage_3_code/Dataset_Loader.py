@@ -28,7 +28,7 @@ class Dataset:
 			img = np.array(instance["image"], dtype=np.float32)
 			label = instance["label"]
 
-			# ORL is 112 x 92 x 3, but RGB channels are identical.
+			# ORL is 112 x 92 x 3, but RGB channels are identical because it is greyscale
 			# Use only one channel.
 			if self.dataset_name == "ORL":
 				img = img[:, :, 0]
