@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from matplotlib import pyplot as plt
+from stage_3_code.Evaluate_Accuracy import Evaluate_Accuracy
 
 
 class CNNMethod:
@@ -16,6 +17,8 @@ class CNNMethod:
         self.learning_rate = learning_rate
         self.result_dir = result_dir
         self.model = None
+        self.evaluate_obj = Evaluate_Accuracy("cnn evaluation", "")
+        self.final_results = None
 
     def run(self, trainData, trainLabel, testData, testLabel):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -63,18 +66,20 @@ class CNNMethod:
             avg_loss = total_loss / len(train_loader)
             train_losses.append(avg_loss)
 
-            accuracy = self.evaluate(test_loader, device)
+            results = self.evaluate(test_loader, device)
+            accuracy = results["Accuracy"]
             test_accuracies.append(accuracy)
 
             print(f"Epoch [{epoch + 1}/{self.epochs}], Loss: {avg_loss:.4f}, Test Accuracy: {accuracy:.4f}")
 
         self.plot_curves(train_losses, test_accuracies)
-        return test_accuracies[-1]
+        return self.final_results
 
     def evaluate(self, test_loader, device):
         self.model.eval()
-        correct = 0
-        total = 0
+
+        all_preds = []
+        all_labels = []
 
         with torch.no_grad():
             for X_batch, y_batch in test_loader:
@@ -84,10 +89,18 @@ class CNNMethod:
                 outputs = self.model(X_batch)
                 predicted = torch.argmax(outputs, dim=1)
 
-                total += y_batch.size(0)
-                correct += (predicted == y_batch).sum().item()
+                all_preds.extend(predicted.cpu().numpy())
+                all_labels.extend(y_batch.cpu().numpy())
 
-        return correct / total
+        self.evaluate_obj.data = {
+            "true_y": all_labels,
+            "pred_y": all_preds
+        }
+
+        results = self.evaluate_obj.evaluate()
+        self.final_results = results
+
+        return results
 
     def plot_curves(self, train_losses, test_accuracies):
         os.makedirs(self.result_dir, exist_ok=True)

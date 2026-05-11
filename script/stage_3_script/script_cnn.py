@@ -9,7 +9,6 @@ if 1:
     # ---- parameter section -------------------------------
     np.random.seed(2)
     torch.manual_seed(2)
-
     dataset_names = ["ORL", "MNIST", "CIFAR"]
     # ------------------------------------------------------
 
