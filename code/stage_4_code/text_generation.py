@@ -11,7 +11,12 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
 import nltk
-nltk.download('stopwords')
+try:
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('stopwords')
+# Throw and catch errors incase stopwords isn't already downloaded
+
 from nltk.corpus import stopwords
 from tqdm import tqdm
 
