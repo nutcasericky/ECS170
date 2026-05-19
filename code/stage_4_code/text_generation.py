@@ -1,142 +1,75 @@
-import os
 import re
+import random
 import numpy as np
 import matplotlib.pyplot as plt
-
-from collections import Counter
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
-import nltk
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords')
-# Throw and catch errors incase stopwords isn't already downloaded
-
-from nltk.corpus import stopwords
+from collections import Counter
 from tqdm import tqdm
 
-
-# Configuration
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# This is my directory to find the jokes. Change accordingly to where your joke data is. 
+DATA_PATH = r"C:\Users\User\OneDrive\Desktop\School\ECS 170\ECS_170\Given Stuff\Project_Stage_4\stage_4_data\text_generation\data"
 
-# This is the directory for my (Ethan W.) computer to find the train and test data.
-# May need to change to appropriate directory if you want to run it.
-TRAIN_DIR = r"C:\Users\User\OneDrive\Desktop\School\ECS 170\ECS_170\Given Stuff\Project_Stage_4\stage_4_data\text_classification\train"
-TEST_DIR = r"C:\Users\User\OneDrive\Desktop\School\ECS 170\ECS_170\Given Stuff\Project_Stage_4\stage_4_data\text_classification\test"
-
-
-MAX_VOCAB = 20000
-MAX_LEN = 250
-BATCH_SIZE = 64
+SEQ_LEN = 5
 EMBED_DIM = 128
-HIDDEN_DIM = 128
+HIDDEN_DIM = 256
 NUM_LAYERS = 2
-EPOCHS = 10
+BATCH_SIZE = 64
+EPOCHS = 50
 LR = 0.001
 
-MODEL_TYPE = "GRU"   # Change to RNN / LSTM / GRU
+
+MODEL_TYPE = "GRU" # Change to RNN/LSTM/GRU
 # Required to test all of these and mark their evaluation metrics.
 # KEEP SAME AS text_classification.py
 
 
-# Text Cleaning (filters out stop words and punctuations and also normalizes the words to fix misspelling
-# or noisy tokens)
+# Load Jokes
 
-stop_words = set(stopwords.words("english"))
+with open(DATA_PATH, "r", encoding="utf8") as f:
+    text = f.read().lower()
 
-def clean_text(text):
-    text = text.lower()
+text = re.sub(r"[^a-zA-Z0-9\s]", "", text)
 
-    text = re.sub(r"<.*?>", "", text)
-    text = re.sub(r"[^a-zA-Z\s]", "", text)
-
-    words = text.split()
-    words = [w for w in words if w not in stop_words]
-
-    return words
+words = text.split()
 
 
+# Vocabulary
+counter = Counter(words)
 
-# Load Dataset
-def load_reviews(directory):
+vocab = sorted(counter.keys())
 
-    texts = []
-    labels = []
-
-    for label_type in ["pos", "neg"]:
-
-        folder = os.path.join(directory, label_type)
-
-        for file in os.listdir(folder):
-
-            path = os.path.join(folder, file)
-
-            with open(path, "r", encoding="utf8") as f:
-                text = f.read()
-
-            tokens = clean_text(text)
-
-            texts.append(tokens)
-
-            labels.append(1 if label_type == "pos" else 0)
-
-    return texts, labels
-
-print("Loading data...")
-
-train_texts, train_labels = load_reviews(TRAIN_DIR)
-test_texts, test_labels = load_reviews(TEST_DIR)
+word2idx = {w:i for i, w in enumerate(vocab)}
+idx2word = {i:w for w,i in word2idx.items()}
 
 
+# Prepare Sequences
+inputs = []
+targets = []
 
-# Build Vocabulary
-counter = Counter()
+for i in range(len(words) - SEQ_LEN):
 
-for text in train_texts:
-    counter.update(text)
+    seq = words[i:i+SEQ_LEN]
 
-vocab = counter.most_common(MAX_VOCAB - 2)
+    target = words[i+SEQ_LEN]
 
-word2idx = {
-    "<PAD>": 0,
-    "<UNK>": 1
-}
+    inputs.append([word2idx[w] for w in seq])
 
-for idx, (word, _) in enumerate(vocab, start=2):
-    word2idx[word] = idx
+    targets.append(word2idx[target])
 
 
-
-# Encode Sequences
-def encode(text):
-
-    seq = [word2idx.get(w, 1) for w in text]
-
-    if len(seq) < MAX_LEN:
-        seq += [0] * (MAX_LEN - len(seq))
-    else:
-        seq = seq[:MAX_LEN]
-
-    return seq
-
-X_train = [encode(x) for x in train_texts]
-X_test = [encode(x) for x in test_texts]
-
-
-
-# Dataset Class
-class ReviewDataset(Dataset):
+# Dataset
+class JokeDataset(Dataset):
 
     def __init__(self, X, y):
 
         self.X = torch.tensor(X, dtype=torch.long)
-        self.y = torch.tensor(y, dtype=torch.float32)
+        self.y = torch.tensor(y, dtype=torch.long)
 
     def __len__(self):
         return len(self.X)
@@ -145,19 +78,15 @@ class ReviewDataset(Dataset):
 
         return self.X[idx], self.y[idx]
 
-train_dataset = ReviewDataset(X_train, train_labels)
-test_dataset = ReviewDataset(X_test, test_labels)
+dataset = JokeDataset(inputs, targets)
 
-train_loader = DataLoader(train_dataset,
-                          batch_size=BATCH_SIZE,
-                          shuffle=True)
-
-test_loader = DataLoader(test_dataset,
-                         batch_size=BATCH_SIZE)
+loader = DataLoader(dataset,
+                    batch_size=BATCH_SIZE,
+                    shuffle=True)
 
 
 # Model
-class TextClassifier(nn.Module):
+class TextGenerator(nn.Module):
 
     def __init__(self,
                  vocab_size,
@@ -168,7 +97,8 @@ class TextClassifier(nn.Module):
 
         super().__init__()
 
-        self.embedding = nn.Embedding(vocab_size, embed_dim)
+        self.embedding = nn.Embedding(vocab_size,
+                                      embed_dim)
 
         if model_type == "RNN":
 
@@ -191,9 +121,7 @@ class TextClassifier(nn.Module):
                               num_layers=num_layers,
                               batch_first=True)
 
-        self.fc = nn.Linear(hidden_dim, 1)
-
-        self.sigmoid = nn.Sigmoid()
+        self.fc = nn.Linear(hidden_dim, vocab_size)
 
         self.model_type = model_type
 
@@ -203,26 +131,22 @@ class TextClassifier(nn.Module):
 
         out, hidden = self.rnn(x)
 
-        if self.model_type == "LSTM":
-            hidden = hidden[0]
+        out = out[:, -1, :]
 
-        hidden = hidden[-1]
+        out = self.fc(out)
 
-        out = self.fc(hidden)
+        return out
 
-        return self.sigmoid(out).squeeze()
-
-model = TextClassifier(
-    vocab_size=len(word2idx),
+model = TextGenerator(
+    vocab_size=len(vocab),
     embed_dim=EMBED_DIM,
     hidden_dim=HIDDEN_DIM,
     num_layers=NUM_LAYERS,
     model_type=MODEL_TYPE
 ).to(DEVICE)
 
-criterion = nn.BCELoss()
+criterion = nn.CrossEntropyLoss()
 
-# Adam optimizer, could change
 optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
 
@@ -235,7 +159,7 @@ for epoch in range(EPOCHS):
 
     total_loss = 0
 
-    for X_batch, y_batch in tqdm(train_loader):
+    for X_batch, y_batch in tqdm(loader):
 
         X_batch = X_batch.to(DEVICE)
         y_batch = y_batch.to(DEVICE)
@@ -252,55 +176,74 @@ for epoch in range(EPOCHS):
 
         total_loss += loss.item()
 
-    avg_loss = total_loss / len(train_loader)
+    avg_loss = total_loss / len(loader)
 
     loss_history.append(avg_loss)
 
     print(f"Epoch {epoch+1}/{EPOCHS} Loss: {avg_loss:.4f}")
 
 
-# Plot Loss Curve
+
+# Plot Loss
 plt.plot(loss_history)
 
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
-plt.title(f"{MODEL_TYPE} Training Loss")
+plt.title(f"{MODEL_TYPE} Generator Loss")
 
-plt.savefig("outputs/classifier_loss.png")
-
-
-# Evaluations
-model.eval()
-
-predictions = []
-ground_truth = []
-
-with torch.no_grad():
-
-    for X_batch, y_batch in test_loader:
-
-        X_batch = X_batch.to(DEVICE)
-
-        outputs = model(X_batch)
-
-        preds = (outputs >= 0.5).int().cpu().numpy()
-
-        predictions.extend(preds)
-
-        ground_truth.extend(y_batch.numpy())
+plt.savefig("outputs/generator_loss.png")
 
 
-# Evaulation Metrics
-accuracy = accuracy_score(ground_truth, predictions)
-precision = precision_score(ground_truth, predictions, average="macro")
-recall = recall_score(ground_truth, predictions, average="macro")
-f1 = f1_score(ground_truth, predictions, average="macro")
+# Generate Text
+def generate_text(start_words, length=30):
 
-print("\nEvaluation Results")
-print("Accuracy :", accuracy)
-print("Precision:", precision)
-print("Recall   :", recall)
-print("F1 Score :", f1)
+    model.eval()
+
+    current_words = start_words.lower().split()
+
+    generated = current_words.copy()
+
+    for _ in range(length):
+
+        seq = current_words[-SEQ_LEN:]
+
+        if len(seq) < SEQ_LEN:
+            seq = ["the"] * (SEQ_LEN - len(seq)) + seq
+
+        seq_idx = [word2idx.get(w, 0) for w in seq]
+
+        x = torch.tensor([seq_idx],
+                         dtype=torch.long).to(DEVICE)
+
+        with torch.no_grad():
+
+            output = model(x)
+
+            predicted = torch.argmax(output, dim=1).item()
+
+        next_word = idx2word[predicted]
+
+        generated.append(next_word)
+
+        current_words.append(next_word)
+
+    return " ".join(generated)
+
+
+# Example Generations
+samples = [
+    "what did the",
+    "a man walks",
+    "why did the",
+    "hello my friend"
+]
+
+for s in samples:
+
+    generated = generate_text(s)
+
+    print("\nSTART:", s)
+    print("GENERATED:", generated)
 
 torch.save(model.state_dict(),
-           f"models/{MODEL_TYPE.lower()}_classifier.pth")
+           f"models/{MODEL_TYPE.lower()}_generator.pth")
