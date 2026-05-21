@@ -1,6 +1,7 @@
 import re
 import random
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 
 import torch
@@ -12,8 +13,10 @@ from tqdm import tqdm
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# This is my directory to find the jokes. Change accordingly to where your joke data is. 
-DATA_PATH = r"C:\Users\User\OneDrive\Desktop\School\ECS 170\ECS_170\Given Stuff\Project_Stage_4\stage_4_data\text_generation\data"
+# Dataset path. This is built relative to the project root, so the script works
+# even if PyCharm runs it from a different working directory.
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+DATA_PATH = os.path.join(PROJECT_ROOT, "data", "stage_4_data", "text_generation", "data")
 
 SEQ_LEN = 5
 EMBED_DIM = 128
@@ -24,12 +27,27 @@ EPOCHS = 50
 LR = 0.001
 
 
+
 MODEL_TYPE = "GRU" # Change to RNN/LSTM/GRU
 # Required to test all of these and mark their evaluation metrics.
 # KEEP SAME AS text_classification.py
 
+# Creates the folders to put corresponding things into if not made already
+RESULT_DIR = os.path.join(PROJECT_ROOT, "result", "stage_4_result")
+OUTPUT_DIR = os.path.join(RESULT_DIR, "outputs")
+MODEL_DIR = os.path.join(RESULT_DIR, "models")
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(MODEL_DIR, exist_ok=True)
+
 
 # Load Jokes
+print("Loading joke data from:", DATA_PATH)
+
+if not os.path.exists(DATA_PATH):
+    raise FileNotFoundError(
+        f"Could not find joke data file: {DATA_PATH}. Check that your joke dataset file is located at data/stage_4_data/text_generation/data"
+    )
 
 with open(DATA_PATH, "r", encoding="utf8") as f:
     text = f.read().lower()
@@ -191,7 +209,7 @@ plt.xlabel("Epoch")
 plt.ylabel("Loss")
 plt.title(f"{MODEL_TYPE} Generator Loss")
 
-plt.savefig("outputs/generator_loss.png")
+plt.savefig(os.path.join(OUTPUT_DIR, f"{MODEL_TYPE.lower()}_generator_loss.png"))
 
 
 # Generate Text
@@ -238,12 +256,21 @@ samples = [
     "hello my friend"
 ]
 
-for s in samples:
+with open(os.path.join(RESULT_DIR, "generation_examples.txt"), "a", encoding="utf8") as f:
 
-    generated = generate_text(s)
+    f.write(f"\n===== {MODEL_TYPE} GENERATED TEXT =====\n")
 
-    print("\nSTART:", s)
-    print("GENERATED:", generated)
+    for s in samples:
+
+        generated = generate_text(s)
+
+        print("\nSTART:", s)
+        print("GENERATED:", generated)
+
+        f.write(f"\nSTART: {s}\n")
+        f.write(f"GENERATED: {generated}\n")
 
 torch.save(model.state_dict(),
-           f"models/{MODEL_TYPE.lower()}_generator.pth")
+           os.path.join(MODEL_DIR, f"{MODEL_TYPE.lower()}_generator.pth"))
+
+print(f"\nGeneration results saved to {RESULT_DIR}")

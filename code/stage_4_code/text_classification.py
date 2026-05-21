@@ -4,8 +4,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Creates the folders to put corresponding things into if not made already
-os.makedirs("outputs", exist_ok=True)
-os.makedirs("models", exist_ok=True)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+RESULT_DIR = os.path.join(PROJECT_ROOT, "result", "stage_4_result")
+OUTPUT_DIR = os.path.join(RESULT_DIR, "outputs")
+MODEL_DIR = os.path.join(RESULT_DIR, "models")
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(MODEL_DIR, exist_ok=True)
 
 from collections import Counter
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
@@ -29,10 +34,20 @@ from tqdm import tqdm
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-# This is the directory for my (Ethan W.) computer to find the train and test data.
-# May need to change to appropriate directory if you want to run it.
-TRAIN_DIR = r"C:\Users\User\OneDrive\Desktop\School\ECS 170\ECS_170\Given Stuff\Project_Stage_4\stage_4_data\text_classification\train"
-TEST_DIR = r"C:\Users\User\OneDrive\Desktop\School\ECS 170\ECS_170\Given Stuff\Project_Stage_4\stage_4_data\text_classification\test"
+# Dataset paths. These are built relative to the project root, so the script works
+# even if PyCharm runs it from a different working directory.
+
+# Try the normal project path first.
+CLASSIFICATION_DATA_DIR = os.path.join(PROJECT_ROOT, "data", "stage_4_data", "text_classification")
+
+# If the extracted IMDb folder is named aclImdb, use that automatically.
+if not os.path.exists(os.path.join(CLASSIFICATION_DATA_DIR, "train", "pos")):
+    ALT_DATA_DIR = os.path.join(PROJECT_ROOT, "data", "stage_4_data", "text_classification", "aclImdb")
+    if os.path.exists(os.path.join(ALT_DATA_DIR, "train", "pos")):
+        CLASSIFICATION_DATA_DIR = ALT_DATA_DIR
+
+TRAIN_DIR = os.path.join(CLASSIFICATION_DATA_DIR, "train")
+TEST_DIR = os.path.join(CLASSIFICATION_DATA_DIR, "test")
 
 
 MAX_VOCAB = 20000
@@ -73,6 +88,10 @@ def load_reviews(directory):
     for label_type in ["pos", "neg"]:
 
         folder = os.path.join(directory, label_type)
+        if not os.path.exists(folder):
+            raise FileNotFoundError(
+                f"Could not find {folder}. Check that your dataset has train/pos, train/neg, test/pos, and test/neg folders."
+            )
 
         for file in os.listdir(folder):
 
@@ -90,6 +109,8 @@ def load_reviews(directory):
     return texts, labels
 
 print("Loading data...")
+print("Training directory:", TRAIN_DIR)
+print("Testing directory:", TEST_DIR)
 
 train_texts, train_labels = load_reviews(TRAIN_DIR)
 test_texts, test_labels = load_reviews(TEST_DIR)
@@ -256,7 +277,7 @@ plt.xlabel("Epoch")
 plt.ylabel("Loss")
 plt.title(f"{MODEL_TYPE} Training Loss")
 
-plt.savefig("outputs/classifier_loss.png")
+plt.savefig(os.path.join(OUTPUT_DIR, f"{MODEL_TYPE.lower()}_classifier_loss.png"))
 
 
 # Evaluations
@@ -291,4 +312,13 @@ print("Recall   :", recall)
 print("F1 Score :", f1)
 
 torch.save(model.state_dict(),
-           f"models/{MODEL_TYPE.lower()}_classifier.pth")
+           os.path.join(MODEL_DIR, f"{MODEL_TYPE.lower()}_classifier.pth"))
+
+with open(os.path.join(RESULT_DIR, "classification_metrics.txt"), "a") as f:
+    f.write(f"\nModel: {MODEL_TYPE}\n")
+    f.write(f"Accuracy : {accuracy}\n")
+    f.write(f"Precision: {precision}\n")
+    f.write(f"Recall   : {recall}\n")
+    f.write(f"F1 Score : {f1}\n")
+
+print(f"\nResults saved to {RESULT_DIR}")
