@@ -59,12 +59,14 @@ NUM_LAYERS = 2
 EPOCHS = 12
 LR = 0.001
 
-MODEL_TYPE = "GRU"   # Change to RNN / LSTM / GRU
+MODEL_TYPE = "LSTM"   # Change to RNN / LSTM / GRU
 # Required to test all of these and mark their evaluation metrics.
 # KEEP SAME AS text_generation.py
 
 # Text Cleaning
-stop_words = set(stopwords.words("english"))
+raw_stop_words = set(stopwords.words("english"))
+negation_words = {"not", "no", "nor", "never", "none", "nothing", "neither", "without"}
+stop_words = raw_stop_words - negation_words
 
 def clean_text(text):
     text = text.lower()
