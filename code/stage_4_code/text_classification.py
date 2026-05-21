@@ -50,13 +50,13 @@ TRAIN_DIR = os.path.join(CLASSIFICATION_DATA_DIR, "train")
 TEST_DIR = os.path.join(CLASSIFICATION_DATA_DIR, "test")
 
 
-MAX_VOCAB = 20000
-MAX_LEN = 250
+MAX_VOCAB = 30000
+MAX_LEN = 400
 BATCH_SIZE = 64
 EMBED_DIM = 128
 HIDDEN_DIM = 128
 NUM_LAYERS = 2
-EPOCHS = 10
+EPOCHS = 12
 LR = 0.001
 
 MODEL_TYPE = "GRU"   # Change to RNN / LSTM / GRU
@@ -199,14 +199,26 @@ class TextClassifier(nn.Module):
                                num_layers=num_layers,
                                batch_first=True)
 
+
         elif model_type == "GRU":
 
-            self.rnn = nn.GRU(embed_dim,
-                              hidden_dim,
-                              num_layers=num_layers,
-                              batch_first=True)
+            self.rnn = nn.GRU(
 
-        self.fc = nn.Linear(hidden_dim, 1)
+                embed_dim,
+
+                hidden_dim,
+
+                num_layers=num_layers,
+
+                batch_first=True,
+
+                dropout=0.3,
+
+                bidirectional=True
+
+            )
+
+        self.fc = nn.Linear(hidden_dim * 2, 1)
 
         self.sigmoid = nn.Sigmoid()
 
@@ -221,7 +233,9 @@ class TextClassifier(nn.Module):
         if self.model_type == "LSTM":
             hidden = hidden[0]
 
-        hidden = hidden[-1]
+        hidden_forward = hidden[-2]
+        hidden_backward = hidden[-1]
+        hidden = torch.cat((hidden_forward, hidden_backward), dim=1)
 
         out = self.fc(hidden)
 
