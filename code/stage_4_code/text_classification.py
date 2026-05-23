@@ -47,7 +47,7 @@ if not os.path.exists(os.path.join(CLASSIFICATION_DATA_DIR, "train", "pos")):
         CLASSIFICATION_DATA_DIR = ALT_DATA_DIR
 
 TRAIN_DIR = os.path.join(CLASSIFICATION_DATA_DIR, "train")
-TEST_DIR = os.path.join(CLASSIFICATION_DATA_DIR, "test")
+TEST_DIR = os.path.join(CLASSIFICATION_DAaTA_DIR, "test")
 
 
 MAX_VOCAB = 30000
@@ -78,9 +78,6 @@ def clean_text(text):
     words = [w for w in words if w not in stop_words]
 
     return words
-
-
-
 # Load Dataset
 def load_reviews(directory):
 
@@ -188,36 +185,33 @@ class TextClassifier(nn.Module):
         self.embedding = nn.Embedding(vocab_size, embed_dim)
 
         if model_type == "RNN":
-
-            self.rnn = nn.RNN(embed_dim,
-                              hidden_dim,
-                              num_layers=num_layers,
-                              batch_first=True)
+            self.rnn = nn.RNN(
+                embed_dim,
+                hidden_dim,
+                num_layers=num_layers,
+                batch_first=True,
+                dropout=0.3,
+                bidirectional=True
+            )
 
         elif model_type == "LSTM":
-
-            self.rnn = nn.LSTM(embed_dim,
-                               hidden_dim,
-                               num_layers=num_layers,
-                               batch_first=True)
-
+            self.rnn = nn.LSTM(
+                embed_dim,
+                hidden_dim,
+                num_layers=num_layers,
+                batch_first=True,
+                dropout=0.3,
+                bidirectional=True
+            )
 
         elif model_type == "GRU":
-
             self.rnn = nn.GRU(
-
                 embed_dim,
-
                 hidden_dim,
-
                 num_layers=num_layers,
-
                 batch_first=True,
-
                 dropout=0.3,
-
                 bidirectional=True
-
             )
 
         self.fc = nn.Linear(hidden_dim * 2, 1)
